@@ -7,7 +7,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tabalt/gracehttp"
+	"github.com/lorock/gracehttp"
 )
 
 func main() {

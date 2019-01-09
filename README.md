@@ -19,7 +19,7 @@ import (
     "fmt"
     "net/http"
 
-    "github.com/tabalt/gracehttp"
+    "github.com/lorock/gracehttp"
 )
 
 func main() {
@@ -39,7 +39,7 @@ Demo
 
 1. Install the demo application
 
-        go get github.com/tabalt/gracehttp/gracehttpdemo
+        go get github.com/lorock/gracehttp/gracehttpdemo
 
 1. Start it in the first terminal
 
