@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
-	"log"
 	"net"
 	"net/http"
 	"os"
@@ -12,15 +11,20 @@ import (
 	"strconv"
 	"syscall"
 	"time"
+
+	"github.com/labstack/gommon/log"
 )
 
 const (
-	GRACEFUL_ENVIRON_KEY    = "IS_GRACEFUL"
-	GRACEFUL_ENVIRON_STRING = GRACEFUL_ENVIRON_KEY + "=1"
-	GRACEFUL_LISTENER_FD    = 3
+	// GracefulEnvironKey GracefulEnvironKey
+	GracefulEnvironKey = "IS_GRACEFUL"
+	// GracefulEnvironString GracefulEnvironString
+	GracefulEnvironString = GracefulEnvironKey + "=1"
+	// GracefulListenerFd GracefulListenerFd
+	GracefulListenerFd = 3
 )
 
-// HTTP server that supported graceful shutdown or restart
+// Server HTTP server that supported graceful shutdown or restart
 type Server struct {
 	httpServer *http.Server
 	listener   net.Listener
@@ -30,9 +34,10 @@ type Server struct {
 	shutdownChan chan bool
 }
 
+// NewServer NewServer
 func NewServer(addr string, handler http.Handler, readTimeout, writeTimeout time.Duration) *Server {
 	isGraceful := false
-	if os.Getenv(GRACEFUL_ENVIRON_KEY) != "" {
+	if os.Getenv(GracefulEnvironKey) != "" {
 		isGraceful = true
 	}
 
@@ -51,6 +56,7 @@ func NewServer(addr string, handler http.Handler, readTimeout, writeTimeout time
 	}
 }
 
+// ListenAndServe ListenAndServe
 func (srv *Server) ListenAndServe() error {
 	addr := srv.httpServer.Addr
 	if addr == "" {
@@ -66,6 +72,7 @@ func (srv *Server) ListenAndServe() error {
 	return srv.Serve()
 }
 
+// ListenAndServeTLS ListenAndServeTLS
 func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	addr := srv.httpServer.Addr
 	if addr == "" {
@@ -73,9 +80,11 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	}
 
 	config := &tls.Config{}
+
 	if srv.httpServer.TLSConfig != nil {
 		*config = *srv.httpServer.TLSConfig
 	}
+
 	if config.NextProtos == nil {
 		config.NextProtos = []string{"http/1.1"}
 	}
@@ -96,6 +105,7 @@ func (srv *Server) ListenAndServeTLS(certFile, keyFile string) error {
 	return srv.Serve()
 }
 
+// Serve Serve
 func (srv *Server) Serve() error {
 	go srv.handleSignals()
 	err := srv.httpServer.Serve(srv.listener)
@@ -107,12 +117,13 @@ func (srv *Server) Serve() error {
 	return err
 }
 
+// getNetListener getNetListener
 func (srv *Server) getNetListener(addr string) (net.Listener, error) {
 	var ln net.Listener
 	var err error
 
 	if srv.isGraceful {
-		file := os.NewFile(GRACEFUL_LISTENER_FD, "")
+		file := os.NewFile(GracefulListenerFd, "")
 		ln, err = net.FileListener(file)
 		if err != nil {
 			err = fmt.Errorf("net.FileListener error: %v", err)
@@ -140,9 +151,19 @@ func (srv *Server) handleSignals() {
 	for {
 		sig = <-srv.signalChan
 		switch sig {
+		// SIGTERM	15	Term	结束程序(可以被捕获、阻塞或忽略)
 		case syscall.SIGTERM:
 			srv.logf("received SIGTERM, graceful shutting down HTTP server.")
 			srv.shutdownHTTPServer()
+		// SIGHUP	1	Term	终端控制进程结束(终端连接断开)
+		case syscall.SIGHUP:
+			srv.logf("received SIGHUP, graceful shutting down HTTP server.")
+			srv.shutdownHTTPServer()
+		// SIGINT	2	Term	用户发送INTR字符(Ctrl+C)触发
+		case syscall.SIGINT:
+			srv.logf("received SIGINT, graceful shutting down HTTP server.")
+			srv.shutdownHTTPServer()
+		// SIGUSR2	31,12,17	Term	用户保留
 		case syscall.SIGUSR2:
 			srv.logf("received SIGUSR2, graceful restarting HTTP server.")
 
@@ -176,11 +197,11 @@ func (srv *Server) startNewProcess() (uintptr, error) {
 	// set graceful restart env flag
 	envs := []string{}
 	for _, value := range os.Environ() {
-		if value != GRACEFUL_ENVIRON_STRING {
+		if value != GracefulEnvironString {
 			envs = append(envs, value)
 		}
 	}
-	envs = append(envs, GRACEFUL_ENVIRON_STRING)
+	envs = append(envs, GracefulEnvironString)
 
 	execSpec := &syscall.ProcAttr{
 		Env:   envs,
@@ -210,6 +231,6 @@ func (srv *Server) logf(format string, args ...interface{}) {
 	if srv.httpServer.ErrorLog != nil {
 		srv.httpServer.ErrorLog.Printf(format, args...)
 	} else {
-		log.Printf(format, args...)
+		log.Infof(format, args...)
 	}
 }
