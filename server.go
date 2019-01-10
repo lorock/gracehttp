@@ -159,10 +159,14 @@ func (srv *Server) handleSignals() {
 		case syscall.SIGHUP:
 			srv.logf("received SIGHUP, graceful shutting down HTTP server.")
 			srv.shutdownHTTPServer()
-		// SIGINT	2	Term	用户发送INTR字符(Ctrl+C)触发
-		case syscall.SIGINT:
-			srv.logf("received SIGINT, graceful shutting down HTTP server.")
-			srv.shutdownHTTPServer()
+		// // SIGINT	2	Term	用户发送INTR字符(Ctrl+C)触发
+		// case syscall.SIGINT:
+		// 	srv.logf("received SIGINT, graceful shutting down HTTP server.")
+		// 	srv.shutdownHTTPServer()
+		// // SIGQUIT	3	Core	用户发送QUIT字符(Ctrl+/)触发
+		// case syscall.SIGQUIT:
+		// 	srv.logf("received SIGQUIT, graceful shutting down HTTP server.")
+		// 	srv.shutdownHTTPServer()
 		// SIGUSR2	31,12,17	Term	用户保留
 		case syscall.SIGUSR2:
 			srv.logf("received SIGUSR2, graceful restarting HTTP server.")
